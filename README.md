@@ -17,7 +17,7 @@ Man vælger mellem to AI-muligheder:
 
 ## Sådan virker det
 
-Hver tale deles i korte nummererede uddrag. Modellen sammenligner talerne parvis og svarer med JSON, der peger på uddrags-id'er, så de viste tekstuddrag altid er de originale.
+Hver tale deles i korte afsnit. Modellen citerer en kort sætning fra hver tale, og appen finder selv det tilsvarende originale afsnit – så de viste uddrag altid er talernes egen tekst. Den lokale model sammenligner talerne parvis og dobbelttjekker hvert fund; ChatGPT får alle taler i ét kald.
 
 ## Udvikling
 
