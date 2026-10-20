@@ -64,11 +64,9 @@ function hostId(): string {
 /** True when the popup can hand the callback back to this page by itself. */
 export const autoCallback = () => location.origin === new URL(REDIRECT_URI).origin
 
-/** Locally the dev server proxies the API (see vite.config.ts). */
-export const apiBase = () => (autoCallback() ? `${location.origin}/openai/v1` : RESOURCE)
-
-export const NOT_LOCAL =
-  'OpenAI tillader ikke, at en hostet webside kalder ChatGPT direkte. Kør appen lokalt (npm run dev, http://127.0.0.1:1455) for at bruge ChatGPT, eller brug den lokale AI.'
+/** OpenAI's API is reached through our own origin: the dev server proxies it
+ * locally (vite.config.ts) and a Vercel function on the hosted version (api/openai.ts). */
+export const apiBase = () => `${location.origin}/openai/v1`
 
 export async function loginUrl(): Promise<string> {
   const savedClient = get(localStorage, CLIENT_KEY)
@@ -230,7 +228,7 @@ export async function listModels(token: string): Promise<string[]> {
   } catch (err) {
     // Network error or a response the browser blocked (CORS); details are in the console.
     console.error('GET /v1/models failed', err)
-    throw new Error(autoCallback() ? 'Kunne ikke hente listen over ChatGPT-modeller. Tjek din internetforbindelse.' : NOT_LOCAL)
+    throw new Error('Kunne ikke hente listen over ChatGPT-modeller. Tjek din internetforbindelse.')
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '')

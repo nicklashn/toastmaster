@@ -103,8 +103,9 @@ export function ChatGPTPanel({ session, setSession, model, setModel, disabled }:
   return (
     <div className="chatgpt">
       <p className="hint">
-        Talerne sendes direkte fra din browser til OpenAI under din egen ChatGPT-konto (aldrig via os), og
-        OpenAI gemmer ikke svaret som en samtale. Kræver ChatGPT Plus eller Pro.
+        Talerne sendes til OpenAI under din egen ChatGPT-konto, og OpenAI gemmer ikke svaret som en samtale. På
+        den hostede udgave går de via vores server, som kun videresender dem – intet gemmes eller logges. Kræver en
+        ChatGPT-konto, hvor OpenAI tillader brug i andre apps.
       </p>
 
       {welcome && (

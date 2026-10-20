@@ -11,9 +11,9 @@ Man vælger mellem to AI-muligheder:
 
 **ChatGPT (valgfri, mere præcis)**
 - Brugeren logger ind med sin egen ChatGPT Plus/Pro-konto via [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source), og analysen bruger af brugerens egen plan.
-- Virker kun, når appen kører lokalt (`npm run dev` på `http://127.0.0.1:1455`). OpenAI's API sender ikke CORS-headere på svar til ChatGPT-plan-tokens, så Vite-serveren på brugerens egen computer videresender kaldene. Talerne går dermed fra brugerens computer direkte til OpenAI's Responses API (`store: false`) – aldrig via en server hos os.
-- Login-callbacken skal være `http://127.0.0.1:1455/auth/callback`, som er den eneste adresse, OpenAI tillader.
-- På den hostede udgave kan man kun bruge den lokale AI. Hostede apps skal ansøge OpenAI via [interesseformularen](https://openai.com/form/sign-in-with-chatgpt-interest/).
+- OpenAI's API sender ikke CORS-headere på svar til ChatGPT-plan-tokens, så kaldene går via appens egen adresse (`/openai/v1/…`): lokalt videresender Vite-serveren dem, og på Vercel gør funktionen [api/openai.ts](api/openai.ts). Den tillader kun `GET /v1/models` og `POST /v1/responses`, videresender kun brugerens egen token og gemmer/logger intet.
+- OpenAI tillader kun login-callbacken `http://127.0.0.1:1455/auth/callback`. Lokalt (`npm run dev`) sker login automatisk; på den hostede udgave kopierer brugeren adressen fra login-vinduet ind i appen.
+- Bemærk: OpenAI's selvbetjening for open source gælder "open-source and locally hosted apps"; hostede apps henvises til [interesseformularen](https://openai.com/form/sign-in-with-chatgpt-interest/). Den hostede ChatGPT-mulighed bruges altså uden for den beskrevne ordning, og OpenAI kan lukke for den.
 
 ## Sådan virker det
 

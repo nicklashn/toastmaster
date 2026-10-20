@@ -114,7 +114,7 @@ export default function App() {
             disabled={busy}
           />{' '}
           <strong>ChatGPT</strong> – mere præcis, finder også gråzoner og giver skræddersyede forslag. Bruger dit eget
-          ChatGPT Plus- eller Pro-abonnement.
+          ChatGPT-abonnement.
         </label>
         {provider === 'chatgpt' && (
           <ChatGPTPanel session={session} setSession={setSession} model={model} setModel={setModel} disabled={busy} />

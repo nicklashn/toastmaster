@@ -1,4 +1,4 @@
-import { apiBase, autoCallback, MANAGE_USAGE_URL, NOT_LOCAL } from './chatgpt'
+import { apiBase, MANAGE_USAGE_URL } from './chatgpt'
 import { addFinding, excerpt, findSegment, splitSegments, type Found } from './segments'
 import { FriendlyError, type Level, type Overlap, type Speech } from './types'
 
@@ -73,7 +73,7 @@ export async function analyzeWithChatGPT(speeches: Speech[], token: string, mode
       }),
     })
   } catch {
-    throw new FriendlyError(autoCallback() ? 'Kunne ikke få forbindelse til ChatGPT. Tjek din internetforbindelse.' : NOT_LOCAL)
+    throw new FriendlyError('Kunne ikke få forbindelse til ChatGPT. Tjek din internetforbindelse.')
   }
   if (!res.ok || !res.body) throw new FriendlyError(await errorMessage(res))
 

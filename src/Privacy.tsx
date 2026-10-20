@@ -7,8 +7,8 @@ export function Privacy() {
         <summary>Privatliv og ansvar</summary>
         <h3>Kort fortalt</h3>
         <p>
-          Toastmaster er et gratis <a href={REPO}>open source-projekt</a>. Vi har ingen server, database, brugerkonti,
-          sporing eller statistik. Talerne bliver aldrig sendt til os og gemmes ikke.
+          Toastmaster er et gratis <a href={REPO}>open source-projekt</a>. Vi har ingen database, brugerkonti, sporing
+          eller statistik, og talerne gemmes ikke. Med den lokale AI forlader talerne aldrig din browser.
         </p>
 
         <h3>Lokal AI</h3>
@@ -20,10 +20,12 @@ export function Privacy() {
 
         <h3>ChatGPT (valgfrit)</h3>
         <p>
-          Vælger du ChatGPT, sendes talerne fra din computer direkte til OpenAI under din egen ChatGPT-konto. Det sker
-          efter OpenAI's <a href="https://openai.com/policies/row-privacy-policy/">privatlivspolitik</a> og vilkår,
-          mellem dig og OpenAI. Svaret gemmes ikke som en samtale hos OpenAI. Talerne kan indeholde andres tekst og
-          personlige oplysninger – del dem kun, hvis talerne er indforstået.
+          Vælger du ChatGPT, sendes talerne til OpenAI under din egen ChatGPT-konto, efter OpenAI's{' '}
+          <a href="https://openai.com/policies/row-privacy-policy/">privatlivspolitik</a> og vilkår. Svaret gemmes
+          ikke som en samtale hos OpenAI. På den hostede udgave går talerne og dit ChatGPT-login via en funktion på
+          vores Vercel-server, fordi OpenAI ikke tillader, at browseren kalder dem direkte. Funktionen videresender
+          kun – den gemmer og logger hverken talerne eller dit login. Talerne kan indeholde andres tekst og personlige
+          oplysninger – del dem kun, hvis talerne er indforstået.
         </p>
 
         <h3>Hosting og lagring i browseren</h3>
