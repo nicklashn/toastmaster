@@ -11,9 +11,9 @@ Man vælger mellem to AI-muligheder:
 
 **ChatGPT (valgfri, mere præcis)**
 - Brugeren logger ind med sin egen ChatGPT Plus/Pro-konto via [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source), og analysen bruger af brugerens egen plan.
-- Talerne sendes direkte fra brugerens browser til OpenAI's Responses API (`store: false`) – aldrig via en server hos os.
-- OpenAI tillader kun callback-adressen `http://127.0.0.1:1455/auth/callback`. Kører appen lokalt (`npm run dev`), sker login automatisk. På den hostede udgave kopierer brugeren adressen fra login-vinduet og indsætter den i appen.
-- Bemærk: OpenAI beskriver plan-usage som gældende for open-source og lokalt kørende apps; hostede apps skal ansøge via [interesseformularen](https://openai.com/form/sign-in-with-chatgpt-interest/).
+- Virker kun, når appen kører lokalt (`npm run dev` på `http://127.0.0.1:1455`). OpenAI's API sender ikke CORS-headere på svar til ChatGPT-plan-tokens, så Vite-serveren på brugerens egen computer videresender kaldene. Talerne går dermed fra brugerens computer direkte til OpenAI's Responses API (`store: false`) – aldrig via en server hos os.
+- Login-callbacken skal være `http://127.0.0.1:1455/auth/callback`, som er den eneste adresse, OpenAI tillader.
+- På den hostede udgave kan man kun bruge den lokale AI. Hostede apps skal ansøge OpenAI via [interesseformularen](https://openai.com/form/sign-in-with-chatgpt-interest/).
 
 ## Sådan virker det
 
