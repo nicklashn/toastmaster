@@ -64,6 +64,12 @@ function hostId(): string {
 /** True when the popup can hand the callback back to this page by itself. */
 export const autoCallback = () => location.origin === new URL(REDIRECT_URI).origin
 
+/** Locally the dev server proxies the API (see vite.config.ts). */
+export const apiBase = () => (autoCallback() ? `${location.origin}/openai/v1` : RESOURCE)
+
+export const NOT_LOCAL =
+  'OpenAI tillader ikke, at en hostet webside kalder ChatGPT direkte. Kør appen lokalt (npm run dev, http://127.0.0.1:1455) for at bruge ChatGPT, eller brug den lokale AI.'
+
 export async function loginUrl(): Promise<string> {
   const savedClient = get(localStorage, CLIENT_KEY)
   const pending: Pending = {
@@ -218,8 +224,25 @@ export async function signOut(): Promise<boolean> {
 }
 
 export async function listModels(token: string): Promise<string[]> {
-  const res = await fetch(`${RESOURCE}/models`, { headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) throw new Error(`Kunne ikke hente ChatGPT-modeller (${res.status}).`)
-  const data: { id: string; visibility?: string }[] = (await res.json()).data ?? []
-  return data.filter((m) => m.visibility === undefined || m.visibility === 'list').map((m) => m.id)
+  let res: Response
+  try {
+    res = await fetch(`${apiBase()}/models`, { headers: { Authorization: `Bearer ${token}` } })
+  } catch (err) {
+    // Network error or a response the browser blocked (CORS); details are in the console.
+    console.error('GET /v1/models failed', err)
+    throw new Error(autoCallback() ? 'Kunne ikke hente listen over ChatGPT-modeller. Tjek din internetforbindelse.' : NOT_LOCAL)
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    console.error('GET /v1/models', res.status, body)
+    throw new Error(`Kunne ikke hente ChatGPT-modeller (${res.status}): ${body.slice(0, 200)}`)
+  }
+  const body = await res.json()
+  const data: { id?: string; slug?: string; visibility?: string }[] = body.data ?? body.models ?? []
+  const ids = data
+    .filter((m) => m.visibility === undefined || m.visibility === 'list')
+    .map((m) => m.id ?? m.slug ?? '')
+    .filter(Boolean)
+  if (!ids.length) console.warn('GET /v1/models returned no usable models', Object.keys(body), data.slice(0, 3))
+  return ids
 }

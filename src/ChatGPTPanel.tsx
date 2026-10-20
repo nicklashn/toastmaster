@@ -11,6 +11,8 @@ import {
 } from './chatgpt'
 
 const WELCOME_KEY = 'toastmaster.welcomeSeen'
+// Example model from OpenAI's plan-usage docs; used when the list is unavailable.
+const DEFAULT_MODEL = 'gpt-6.1-sol'
 
 interface Props {
   session: Session | null
@@ -59,9 +61,12 @@ export function ChatGPTPanel({ session, setSession, model, setModel, disabled }:
       .then(listModels)
       .then((list) => {
         setModels(list)
-        if (!list.includes(model)) setModel(list[0] ?? '')
+        if (!list.includes(model)) setModel(list.includes(DEFAULT_MODEL) ? DEFAULT_MODEL : (list[0] ?? DEFAULT_MODEL))
       })
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+      .catch((err) => {
+        if (!model) setModel(DEFAULT_MODEL)
+        setError(err instanceof Error ? err.message : String(err))
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
@@ -128,11 +133,12 @@ export function ChatGPTPanel({ session, setSession, model, setModel, disabled }:
           </span>
           <label>
             Model{' '}
-            <select value={model} onChange={(e) => setModel(e.target.value)} disabled={disabled || !models.length}>
+            <input list="chatgpt-models" value={model} onChange={(e) => setModel(e.target.value.trim())} disabled={disabled} />
+            <datalist id="chatgpt-models">
               {models.map((m) => (
-                <option key={m}>{m}</option>
+                <option key={m} value={m} />
               ))}
-            </select>
+            </datalist>
           </label>
           <button type="button" onClick={logout} disabled={disabled}>
             Log ud

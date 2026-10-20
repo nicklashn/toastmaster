@@ -1,4 +1,4 @@
-import { MANAGE_USAGE_URL } from './chatgpt'
+import { apiBase, autoCallback, MANAGE_USAGE_URL, NOT_LOCAL } from './chatgpt'
 import { addFinding, excerpt, findSegment, splitSegments, type Found } from './segments'
 import { FriendlyError, type Overlap, type Speech } from './types'
 
@@ -52,18 +52,23 @@ export async function analyzeWithChatGPT(speeches: Speech[], token: string, mode
     .map((s, i) => `Tale ${i + 1} (af ${s.name}):\n"""\n${s.text.trim()}\n"""`)
     .join('\n\n')
 
-  const res = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      instructions: INSTRUCTIONS,
-      input: [{ role: 'user', content: [{ type: 'input_text', text }] }],
-      text: { format: { type: 'json_schema', name: 'overlaps', strict: true, schema: SCHEMA } },
-      store: false,
-      stream: true,
-    }),
-  })
+  let res: Response
+  try {
+    res = await fetch(`${apiBase()}/responses`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        instructions: INSTRUCTIONS,
+        input: [{ role: 'user', content: [{ type: 'input_text', text }] }],
+        text: { format: { type: 'json_schema', name: 'overlaps', strict: true, schema: SCHEMA } },
+        store: false,
+        stream: true,
+      }),
+    })
+  } catch {
+    throw new FriendlyError(autoCallback() ? 'Kunne ikke få forbindelse til ChatGPT. Tjek din internetforbindelse.' : NOT_LOCAL)
+  }
   if (!res.ok || !res.body) throw new FriendlyError(await errorMessage(res))
 
   let raw: RawOverlap[]

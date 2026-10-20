@@ -71,7 +71,9 @@ export interface Found {
 }
 
 // Adds a finding, merging it into an earlier one for the same two speeches
-// that points at the same or neighbouring passages (one story split in two).
+// when it shares a passage in one speech and is next to it in the other (one
+// story split in two). Two different stories told back to back in both
+// speeches stay separate.
 export function addFinding(
   found: Found[],
   sa: number,
@@ -82,7 +84,14 @@ export function addFinding(
   explanation: string,
 ) {
   const near = (list: number[], i: number) => list.some((x) => Math.abs(x - i) <= 1)
-  const same = found.find((f) => f.sa === sa && f.sb === sb && near(f.a, ia) && near(f.b, ib))
+  const same = found.find(
+    (f) =>
+      f.sa === sa &&
+      f.sb === sb &&
+      near(f.a, ia) &&
+      near(f.b, ib) &&
+      (f.a.includes(ia) || f.b.includes(ib)),
+  )
   if (same) {
     if (!same.a.includes(ia)) same.a.push(ia)
     if (!same.b.includes(ib)) same.b.push(ib)
