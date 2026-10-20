@@ -3,11 +3,17 @@ export interface Speech {
   text: string
 }
 
+/** 'klar': the same story or joke. 'gråzone': similar enough to feel repeated. */
+export type Level = 'klar' | 'gråzone'
+
 export interface Overlap {
   speakerA: string
   speakerB: string
   kind: string
+  level: Level
   explanation: string
+  /** Advice for the toastmaster, based on the speaking order. */
+  suggestion: string
   excerptA: string
   excerptB: string
 }

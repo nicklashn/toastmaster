@@ -1,3 +1,5 @@
+import type { Level } from './types'
+
 // Splits a speech into short passages. Model quotes are mapped back to these,
 // so we always show the original text instead of model output.
 const MAX_SEGMENT_CHARS = 400
@@ -67,7 +69,9 @@ export interface Found {
   a: number[]
   b: number[]
   kind: string
+  level: Level
   explanation: string
+  suggestion: string
 }
 
 // Adds a finding, merging it into an earlier one for the same two speeches
@@ -76,13 +80,9 @@ export interface Found {
 // speeches stay separate.
 export function addFinding(
   found: Found[],
-  sa: number,
-  sb: number,
-  ia: number,
-  ib: number,
-  kind: string,
-  explanation: string,
+  { ia, ib, ...item }: Omit<Found, 'a' | 'b'> & { ia: number; ib: number },
 ) {
+  const { sa, sb } = item
   const near = (list: number[], i: number) => list.some((x) => Math.abs(x - i) <= 1)
   const same = found.find(
     (f) =>
@@ -95,9 +95,10 @@ export function addFinding(
   if (same) {
     if (!same.a.includes(ia)) same.a.push(ia)
     if (!same.b.includes(ib)) same.b.push(ib)
-    if (same.kind === 'andet') same.kind = kind
+    if (same.kind === 'andet') same.kind = item.kind
+    if (item.level === 'klar') same.level = 'klar'
   } else {
-    found.push({ sa, sb, a: [ia], b: [ib], kind, explanation })
+    found.push({ ...item, a: [ia], b: [ib] })
   }
 }
 

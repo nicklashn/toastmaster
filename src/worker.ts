@@ -52,6 +52,9 @@ function describeProgress(text: string): string {
   return text
 }
 
+// The small local model only reports clear overlaps: in testing, its grey
+// zones were mostly noise and its advice repeated the prompt, so advice is
+// built from the speaking order instead (see orderAdvice).
 const SYSTEM_PROMPT = `Du hjælper med at planlægge et dansk bryllup. Du sammenligner to bryllupstaler og finder historier, anekdoter og jokes, som BEGGE talere fortæller – også når de er formuleret forskelligt, fortalt fra en anden vinkel, eller detaljerne afviger lidt. Tænk: "Den historie har gæsterne allerede hørt."
 Tæller IKKE som overlap:
 - almindelige floskler og hilsner (fx "tillykke", "skål for brudeparret", "I er så smukke")
@@ -133,20 +136,35 @@ Hvis der ikke er nogen overlap, returnér {"overlaps":[]}.`
   for (const o of raw) {
     const ia = findSegment(o.citat_a, a.segments, a.ids)
     const ib = findSegment(o.citat_b, b.segments, b.ids)
-    if (ia >= 0 && ib >= 0) addFinding(found, 0, 1, ia, ib, o.type, o.forklaring)
+    if (ia >= 0 && ib >= 0) {
+      addFinding(found, {
+        sa: 0,
+        sb: 1,
+        ia,
+        ib,
+        kind: o.type,
+        level: 'klar',
+        explanation: o.forklaring,
+        suggestion: orderAdvice(a.speech.name, b.speech.name),
+      })
+    }
   }
 
   const overlaps: Overlap[] = []
   for (const f of found) {
-    const o = {
+    const excerptA = excerpt(f.a, a.segments)
+    const excerptB = excerpt(f.b, b.segments)
+    if (!(await isSameStory(llm, excerptA, excerptB))) continue
+    overlaps.push({
       speakerA: a.speech.name,
       speakerB: b.speech.name,
       kind: f.kind,
+      level: f.level,
       explanation: f.explanation,
-      excerptA: excerpt(f.a, a.segments),
-      excerptB: excerpt(f.b, b.segments),
-    }
-    if (await isSameStory(llm, o.excerptA, o.excerptB)) overlaps.push(o)
+      suggestion: f.suggestion,
+      excerptA,
+      excerptB,
+    })
   }
   return overlaps
 }
@@ -183,6 +201,9 @@ const VERIFY_SCHEMA = JSON.stringify({
   properties: { samme: { type: 'boolean' } },
   required: ['samme'],
 })
+
+const orderAdvice = (first: string, second: string) =>
+  `${first} taler først og kan beholde historien. ${second} kan henvise tilbage ("Som ${first} fortalte …"), fortælle en ny vinkel eller detalje – eller springe den over.`
 
 // With thinking disabled WebLLM still prefixes an empty <think></think> block.
 const stripThink = (content: string | null) => (content ?? '').replace(/<think>[\s\S]*?<\/think>/, '')

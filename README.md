@@ -28,3 +28,11 @@ npm run build   # statisk build i dist/
 ```
 
 Kan deployes som statisk site på Vercel (Vite registreres automatisk; output: `dist`).
+
+## Licens
+
+[MIT](LICENSE). Appen henter ved brug AI-modellen [Qwen3-4B](https://huggingface.co/Qwen/Qwen3-4B) (Apache 2.0) i WebLLM-format fra Hugging Face og bruger [WebLLM](https://github.com/mlc-ai/web-llm) (Apache 2.0). Modelfilerne er ikke en del af dette repo.
+
+## Privatliv
+
+Se "Privatliv og ansvar" nederst i appen ([src/Privacy.tsx](src/Privacy.tsx)).

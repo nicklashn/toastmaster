@@ -132,8 +132,32 @@ progress { width: 100%; }
   background: var(--accent);
   color: #fff;
 }
+.overlap.gray { border-style: dashed; }
+.tag.gray { background: var(--muted); }
+.suggestion {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--bg);
+}
+footer { margin-top: 48px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.9em; color: var(--muted); }
+footer summary { cursor: pointer; }
+footer h3 { font-size: 1em; margin: 14px 0 4px; color: var(--fg); }
+footer p { margin: 0; }
 .side-by-side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 640px) { .side-by-side { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .overlap.gray { border-style: dashed; }
+.tag.gray { background: var(--muted); }
+.suggestion {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--bg);
+}
+footer { margin-top: 48px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.9em; color: var(--muted); }
+footer summary { cursor: pointer; }
+footer h3 { font-size: 1em; margin: 14px 0 4px; color: var(--fg); }
+footer p { margin: 0; }
+.side-by-side { grid-template-columns: 1fr; } }
 blockquote {
   margin: 0;
   padding: 8px 12px;

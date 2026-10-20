@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChatGPTPanel } from './ChatGPTPanel'
+import { Privacy } from './Privacy'
 import { accessToken, savedSession, type Session } from './chatgpt'
 import { SAMPLE_SPEECHES } from './samples'
 import type { FromWorker, Overlap, Provider, Speech } from './types'
@@ -10,6 +11,20 @@ const empty = (): Speech => ({ name: '', text: '' })
 const hasWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator
 
 const KIND_LABEL: Record<string, string> = { historie: 'Historie', joke: 'Joke', andet: 'Andet' }
+
+// Clear overlaps first, grey zones after; otherwise keep the analysis order.
+const sortByLevel = (list: Overlap[]) =>
+  [...list].sort((x, y) => Number(x.level === 'gråzone') - Number(y.level === 'gråzone'))
+
+function summary(list: Overlap[]): string {
+  if (!list.length) return 'Ingen overlap fundet'
+  const gray = list.filter((o) => o.level === 'gråzone').length
+  const clear = list.length - gray
+  const parts = []
+  if (clear) parts.push(`${clear} ${clear === 1 ? 'klart overlap' : 'klare overlap'}`)
+  if (gray) parts.push(`${gray} ${gray === 1 ? 'gråzone' : 'gråzoner'}`)
+  return parts.join(' og ')
+}
 
 export default function App() {
   const [speeches, setSpeeches] = useState<Speech[]>([empty(), empty()])
@@ -83,7 +98,7 @@ export default function App() {
             disabled={busy}
           />{' '}
           <strong>Lokal AI i browseren</strong> – privat og gratis. Talerne forlader ikke din computer. Mindre præcis
-          (Qwen3-4B, ca. 2–3 GB download første gang).
+          og finder kun klare overlap (Qwen3-4B, ca. 2–3 GB download første gang).
         </label>
         {provider === 'local' && !hasWebGPU && (
           <div className="error">
@@ -98,12 +113,17 @@ export default function App() {
             onChange={() => setProvider('chatgpt')}
             disabled={busy}
           />{' '}
-          <strong>ChatGPT</strong> – mere præcis. Bruger dit eget ChatGPT Plus- eller Pro-abonnement.
+          <strong>ChatGPT</strong> – mere præcis, finder også gråzoner og giver skræddersyede forslag. Bruger dit eget
+          ChatGPT Plus- eller Pro-abonnement.
         </label>
         {provider === 'chatgpt' && (
           <ChatGPTPanel session={session} setSession={setSession} model={model} setModel={setModel} disabled={busy} />
         )}
       </fieldset>
+
+      <p className="hint">
+        Indsæt talerne i den rækkefølge, de holdes – forslagene til toastmasteren bygger på rækkefølgen.
+      </p>
 
       <div className="toolbar">
         <button type="button" onClick={() => setSpeeches(SAMPLE_SPEECHES.map((s) => ({ ...s })))} disabled={busy}>
@@ -166,14 +186,15 @@ export default function App() {
 
       {overlaps && (
         <section>
-          <h2>{overlaps.length ? `Mulige overlap (${overlaps.length})` : 'Ingen overlap fundet'}</h2>
+          <h2>{summary(overlaps)}</h2>
           {overlaps.length > 0 && (
             <p className="hint">AI'en kan tage fejl – brug resultatet som et udgangspunkt for en snak med talerne.</p>
           )}
-          {overlaps.map((o, i) => (
-            <article className="overlap" key={i}>
+          {sortByLevel(overlaps).map((o, i) => (
+            <article className={o.level === 'gråzone' ? 'overlap gray' : 'overlap'} key={i}>
               <p>
-                <span className="tag">{KIND_LABEL[o.kind] ?? o.kind}</span> {o.explanation}
+                <span className="tag">{KIND_LABEL[o.kind] ?? o.kind}</span>{' '}
+                {o.level === 'gråzone' && <span className="tag gray">Gråzone – til overvejelse</span>} {o.explanation}
               </p>
               <div className="side-by-side">
                 <blockquote>
@@ -185,10 +206,17 @@ export default function App() {
                   {o.excerptB}
                 </blockquote>
               </div>
+              {o.suggestion && (
+                <p className="suggestion">
+                  <strong>Forslag til toastmasteren:</strong> {o.suggestion}
+                </p>
+              )}
             </article>
           ))}
         </section>
       )}
+
+      <Privacy />
     </main>
   )
 }

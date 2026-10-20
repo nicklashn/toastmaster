@@ -1,17 +1,19 @@
 import { apiBase, autoCallback, MANAGE_USAGE_URL, NOT_LOCAL } from './chatgpt'
 import { addFinding, excerpt, findSegment, splitSegments, type Found } from './segments'
-import { FriendlyError, type Overlap, type Speech } from './types'
+import { FriendlyError, type Level, type Overlap, type Speech } from './types'
 
 // Plan-usage requests must use the Responses API with store: false and
 // stream: true, and must not set temperature or max_output_tokens.
 // See https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations
 
-const INSTRUCTIONS = `Du hjælper med at planlægge et dansk bryllup. Du får flere bryllupstaler og finder historier, anekdoter og jokes, som MINDST TO talere fortæller – også når de er formuleret forskelligt, fortalt fra en anden vinkel, eller detaljerne afviger lidt. Tænk: "Den historie har gæsterne allerede hørt."
-Tæller IKKE som overlap:
-- almindelige floskler og hilsner (fx "tillykke", "skål for brudeparret", "I er så smukke")
-- to forskellige historier, der blot handler om samme person, sted eller egenskab
-Angiv hvert overlap som et par af to taler. Fortæller tre taler samme historie, så angiv hvert par.
-For hver tale: kopiér en kort sætning ORDRET fra talen, hvor historien fortælles. Forklar kort på dansk (1–2 sætninger), hvad der gentages.`
+const INSTRUCTIONS = `Du hjælper toastmasteren ved et dansk bryllup. Du får bryllupstalerne nummereret i den rækkefølge, de holdes (tale 1 holdes først). Find steder, hvor gæsterne vil opleve en gentagelse, i to niveauer:
+- "klar": samme konkrete historie, anekdote eller joke – også når den er formuleret forskelligt, fortalt fra en anden vinkel, eller detaljerne afviger.
+- "gråzone": ikke samme historie, men så tæt på, at det kan føles som en gentagelse: samme tema eller egenskab (fx at bruden altid kommer for sent), samme pointe eller samme type joke.
+Tæller ikke: almindelige floskler og hilsner (fx "tillykke", "skål for brudeparret", "I er så smukke").
+Angiv hvert overlap som et par af to taler. Fortæller tre taler det samme, så angiv hvert par.
+For hver tale: kopiér en kort sætning ORDRET fra talen, hvor det fortælles.
+"forklaring": kort på dansk (1–2 sætninger), hvad der gentages.
+"forslag": et konkret og venligt råd til toastmasteren (1–3 sætninger) ud fra rækkefølgen, med talernes navne. Fx hvem der bør beholde historien (typisk den, der taler først, eller den med den stærkeste version), hvordan den senere taler kan dreje den (henvise tilbage – "Som Henrik fortalte …" – bidrage med en ny vinkel eller detalje, eller springe den over), om en byttet rækkefølge giver mere mening, eller om gentagelsen kan blive en sjov rød tråd. Ved gråzoner: formulér det som en overvejelse, ikke et krav.`
 
 const SCHEMA = {
   type: 'object',
@@ -28,9 +30,11 @@ const SCHEMA = {
           tale_b: { type: 'integer' },
           citat_b: { type: 'string' },
           type: { type: 'string', enum: ['historie', 'joke', 'andet'] },
+          vurdering: { type: 'string', enum: ['klar', 'gråzone'] },
           forklaring: { type: 'string' },
+          forslag: { type: 'string' },
         },
-        required: ['tale_a', 'citat_a', 'tale_b', 'citat_b', 'type', 'forklaring'],
+        required: ['tale_a', 'citat_a', 'tale_b', 'citat_b', 'type', 'vurdering', 'forklaring', 'forslag'],
       },
     },
   },
@@ -43,7 +47,9 @@ interface RawOverlap {
   tale_b: number
   citat_b: string
   type: string
+  vurdering: Level
   forklaring: string
+  forslag: string
 }
 
 export async function analyzeWithChatGPT(speeches: Speech[], token: string, model: string): Promise<Overlap[]> {
@@ -87,16 +93,19 @@ export async function analyzeWithChatGPT(speeches: Speech[], token: string, mode
     const ia = findSegment(o.citat_a, segments[sa], all(sa))
     const ib = findSegment(o.citat_b, segments[sb], all(sb))
     if (ia < 0 || ib < 0) continue
-    // Keep a consistent order so the same pair merges either way round.
-    if (sa < sb) addFinding(found, sa, sb, ia, ib, o.type, o.forklaring)
-    else addFinding(found, sb, sa, ib, ia, o.type, o.forklaring)
+    // Keep speaking order so the same pair merges either way round.
+    const item = { kind: o.type, level: o.vurdering, explanation: o.forklaring, suggestion: o.forslag }
+    if (sa < sb) addFinding(found, { ...item, sa, sb, ia, ib })
+    else addFinding(found, { ...item, sa: sb, sb: sa, ia: ib, ib: ia })
   }
 
   return found.map((f) => ({
     speakerA: speeches[f.sa].name,
     speakerB: speeches[f.sb].name,
     kind: f.kind,
+    level: f.level,
     explanation: f.explanation,
+    suggestion: f.suggestion,
     excerptA: excerpt(f.a, segments[f.sa]),
     excerptB: excerpt(f.b, segments[f.sb]),
   }))
