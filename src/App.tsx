@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { ChatGPTPanel } from './ChatGPTPanel'
+import { accessToken, savedSession, type Session } from './chatgpt'
 import { SAMPLE_SPEECHES } from './samples'
-import type { FromWorker, Overlap, Speech } from './types'
+import type { FromWorker, Overlap, Provider, Speech } from './types'
 
 const MIN = 2
 const MAX = 6
@@ -13,11 +15,10 @@ export default function App() {
   const [speeches, setSpeeches] = useState<Speech[]>([empty(), empty()])
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<{ text: string; progress?: number } | null>(null)
-  const [error, setError] = useState<string | null>(
-    hasWebGPU
-      ? null
-      : 'Din browser understøtter ikke WebGPU, som er nødvendig for at køre AI-modellen lokalt. Brug en nyere udgave af Chrome eller Edge på en computer.',
-  )
+  const [error, setError] = useState<string | null>(null)
+  const [provider, setProvider] = useState<Provider['kind']>(hasWebGPU ? 'local' : 'chatgpt')
+  const [session, setSession] = useState<Session | null>(savedSession)
+  const [model, setModel] = useState('')
   const [overlaps, setOverlaps] = useState<Overlap[] | null>(null)
   const worker = useRef<Worker | null>(null)
 
@@ -41,24 +42,68 @@ export default function App() {
     setSpeeches((s) => s.map((sp, j) => (j === i ? { ...sp, ...patch } : sp)))
 
   const filled = speeches.filter((s) => s.text.trim())
-  const canCompare = !busy && hasWebGPU && filled.length >= MIN
+  const aiReady = provider === 'local' ? hasWebGPU : Boolean(session && model)
+  const canCompare = !busy && aiReady && filled.length >= MIN
 
-  const compare = () => {
+  const compare = async () => {
     setError(null)
     setOverlaps(null)
     setBusy(true)
     setStatus({ text: 'Starter…' })
     const named = filled.map((s, i) => ({ name: s.name.trim() || `Taler ${i + 1}`, text: s.text }))
-    worker.current?.postMessage({ type: 'analyze', speeches: named })
+    let chosen: Provider = { kind: 'local' }
+    if (provider === 'chatgpt') {
+      try {
+        chosen = { kind: 'chatgpt', token: await accessToken(), model }
+      } catch (err) {
+        setBusy(false)
+        setStatus(null)
+        setSession(savedSession())
+        setError(err instanceof Error ? err.message : String(err))
+        return
+      }
+    }
+    worker.current?.postMessage({ type: 'analyze', speeches: named, provider: chosen })
   }
 
   return (
     <main>
       <h1>Sammenlign bryllupstaler</h1>
       <p className="intro">
-        Find historier og jokes, som flere talere har tænkt sig at fortælle. AI-modellen (Qwen3-4B) kører
-        lokalt i din browser – talerne sendes ikke nogen steder hen og gemmes ikke.
+        Find historier og jokes, som flere talere har tænkt sig at fortælle. Talerne gemmes ikke.
       </p>
+
+      <fieldset className="provider">
+        <legend>AI</legend>
+        <label>
+          <input
+            type="radio"
+            checked={provider === 'local'}
+            onChange={() => setProvider('local')}
+            disabled={busy}
+          />{' '}
+          <strong>Lokal AI i browseren</strong> – privat og gratis. Talerne forlader ikke din computer. Mindre præcis
+          (Qwen3-4B, ca. 2–3 GB download første gang).
+        </label>
+        {provider === 'local' && !hasWebGPU && (
+          <div className="error">
+            Din browser understøtter ikke WebGPU, som er nødvendig for den lokale AI. Brug en nyere udgave af Chrome
+            eller Edge på en computer – eller vælg ChatGPT.
+          </div>
+        )}
+        <label>
+          <input
+            type="radio"
+            checked={provider === 'chatgpt'}
+            onChange={() => setProvider('chatgpt')}
+            disabled={busy}
+          />{' '}
+          <strong>ChatGPT</strong> – mere præcis. Bruger dit eget ChatGPT Plus- eller Pro-abonnement.
+        </label>
+        {provider === 'chatgpt' && (
+          <ChatGPTPanel session={session} setSession={setSession} model={model} setModel={setModel} disabled={busy} />
+        )}
+      </fieldset>
 
       <div className="toolbar">
         <button type="button" onClick={() => setSpeeches(SAMPLE_SPEECHES.map((s) => ({ ...s })))} disabled={busy}>
@@ -108,7 +153,7 @@ export default function App() {
       <button type="button" className="primary" onClick={compare} disabled={!canCompare}>
         {busy ? 'Arbejder…' : 'Sammenlign taler'}
       </button>
-      {!busy && hasWebGPU && filled.length < MIN && <p className="hint">Udfyld mindst to taler.</p>}
+      {!busy && aiReady && filled.length < MIN && <p className="hint">Udfyld mindst to taler.</p>}
 
       {status && (
         <div className="status">

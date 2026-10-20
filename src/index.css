@@ -80,12 +80,35 @@ input, textarea {
 }
 textarea { min-height: 200px; resize: vertical; }
 
+.provider {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.provider legend { font-weight: 600; padding: 0 4px; }
+.chatgpt { margin-left: 24px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.chatgpt .hint { margin: 0; font-size: 0.9em; }
+.signed-in { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.paste { width: 100%; }
+.paste p { margin: 0 0 6px; font-size: 0.9em; }
+.paste-row { display: flex; gap: 6px; }
+.paste-row input { flex: 1; min-width: 0; }
+.notice { border: 1px solid var(--accent); border-radius: 8px; padding: 10px 12px; }
+.notice p { margin: 4px 0 8px; }
+a { color: var(--accent); }
+code { font-size: 0.9em; word-break: break-all; }
+select { font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); }
+
 .status { margin-top: 16px; }
 .status p { margin: 0 0 6px; font-size: 0.9em; word-break: break-word; }
 progress { width: 100%; }
 
 .error {
-  margin-top: 16px;
+  margin-top: 8px;
   padding: 12px;
   border-radius: 8px;
   background: var(--error-bg);

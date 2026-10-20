@@ -2,9 +2,18 @@
 
 Simpel webapp, der finder gentagne historier og jokes på tværs af 2–6 danske bryllupstaler – også når de er formuleret forskelligt.
 
+Man vælger mellem to AI-muligheder:
+
+**Lokal AI (standard, privat)**
 - AI'en (Qwen3-4B, kvantiseret `q4f16_1`, eller `q4f32_1` hvis GPU'en ikke understøtter shader-f16) kører lokalt i browseren via [WebLLM](https://github.com/mlc-ai/web-llm) og WebGPU i en Web Worker.
 - Ingen backend, login eller API-kald. Taletekster forlader aldrig browseren og gemmes ikke. Kun modelfilerne hentes (ca. 2–3 GB fra Hugging Face første gang) og caches i browseren.
 - Kræver en browser med WebGPU (fx nyere Chrome/Edge på desktop) og ca. 3,5–4,5 GB grafikhukommelse.
+
+**ChatGPT (valgfri, mere præcis)**
+- Brugeren logger ind med sin egen ChatGPT Plus/Pro-konto via [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source), og analysen bruger af brugerens egen plan.
+- Talerne sendes direkte fra brugerens browser til OpenAI's Responses API (`store: false`) – aldrig via en server hos os.
+- OpenAI tillader kun callback-adressen `http://127.0.0.1:1455/auth/callback`. Kører appen lokalt (`npm run dev`), sker login automatisk. På den hostede udgave kopierer brugeren adressen fra login-vinduet og indsætter den i appen.
+- Bemærk: OpenAI beskriver plan-usage som gældende for open-source og lokalt kørende apps; hostede apps skal ansøge via [interesseformularen](https://openai.com/form/sign-in-with-chatgpt-interest/).
 
 ## Sådan virker det
 
@@ -14,7 +23,7 @@ Hver tale deles i korte nummererede uddrag. Modellen sammenligner talerne parvis
 
 ```sh
 npm install
-npm run dev     # udviklingsserver
+npm run dev     # udviklingsserver på http://127.0.0.1:1455
 npm run build   # statisk build i dist/
 ```
 

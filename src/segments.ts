@@ -59,3 +59,38 @@ export function findSegment(quote: string, segments: string[], ids: number[]): n
   }
   return best
 }
+
+/** A finding between speech `sa` (passages `a`) and speech `sb` (passages `b`). */
+export interface Found {
+  sa: number
+  sb: number
+  a: number[]
+  b: number[]
+  kind: string
+  explanation: string
+}
+
+// Adds a finding, merging it into an earlier one for the same two speeches
+// that points at the same or neighbouring passages (one story split in two).
+export function addFinding(
+  found: Found[],
+  sa: number,
+  sb: number,
+  ia: number,
+  ib: number,
+  kind: string,
+  explanation: string,
+) {
+  const near = (list: number[], i: number) => list.some((x) => Math.abs(x - i) <= 1)
+  const same = found.find((f) => f.sa === sa && f.sb === sb && near(f.a, ia) && near(f.b, ib))
+  if (same) {
+    if (!same.a.includes(ia)) same.a.push(ia)
+    if (!same.b.includes(ib)) same.b.push(ib)
+    if (same.kind === 'andet') same.kind = kind
+  } else {
+    found.push({ sa, sb, a: [ia], b: [ib], kind, explanation })
+  }
+}
+
+export const excerpt = (idx: number[], segments: string[]) =>
+  [...idx].sort((x, y) => x - y).map((i) => segments[i]).join(' ')

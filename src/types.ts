@@ -12,9 +12,14 @@ export interface Overlap {
   excerptB: string
 }
 
-export type ToWorker = { type: 'analyze'; speeches: Speech[] }
+export type Provider = { kind: 'local' } | { kind: 'chatgpt'; token: string; model: string }
+
+export type ToWorker = { type: 'analyze'; speeches: Speech[]; provider: Provider }
 
 export type FromWorker =
   | { type: 'status'; text: string; progress?: number }
   | { type: 'result'; overlaps: Overlap[] }
   | { type: 'error'; message: string }
+
+/** An error whose message is already written for the user. */
+export class FriendlyError extends Error {}

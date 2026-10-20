@@ -1,6 +1,7 @@
 import { CreateMLCEngine, prebuiltAppConfig, type MLCEngine } from '@mlc-ai/web-llm'
-import { chunkSegments, findSegment, splitSegments } from './segments'
-import type { FromWorker, Overlap, Speech, ToWorker } from './types'
+import { analyzeWithChatGPT } from './analyzeChatGPT'
+import { addFinding, chunkSegments, excerpt, findSegment, splitSegments, type Found } from './segments'
+import { FriendlyError, type FromWorker, type Overlap, type Speech, type ToWorker } from './types'
 
 // Both ids are in WebLLM's prebuilt model list. f16 is smaller and faster but
 // needs the GPU to support the "shader-f16" feature.
@@ -90,13 +91,6 @@ interface Part {
   ids: number[]
 }
 
-interface Found {
-  a: number[]
-  b: number[]
-  kind: string
-  explanation: string
-}
-
 async function comparePair(llm: MLCEngine, a: Part, b: Part): Promise<Overlap[]> {
   const text = (part: Part) => part.ids.map((i) => part.segments[i]).join('\n')
 
@@ -139,20 +133,9 @@ Hvis der ikke er nogen overlap, returnér {"overlaps":[]}.`
   for (const o of raw) {
     const ia = findSegment(o.citat_a, a.segments, a.ids)
     const ib = findSegment(o.citat_b, b.segments, b.ids)
-    if (ia < 0 || ib < 0) continue
-    const near = (list: number[], i: number) => list.some((x) => Math.abs(x - i) <= 1)
-    const same = found.find((f) => near(f.a, ia) && near(f.b, ib))
-    if (same) {
-      if (!same.a.includes(ia)) same.a.push(ia)
-      if (!same.b.includes(ib)) same.b.push(ib)
-      if (same.kind === 'andet') same.kind = o.type
-    } else {
-      found.push({ a: [ia], b: [ib], kind: o.type, explanation: o.forklaring })
-    }
+    if (ia >= 0 && ib >= 0) addFinding(found, 0, 1, ia, ib, o.type, o.forklaring)
   }
 
-  const excerpt = (idx: number[], part: Part) =>
-    [...idx].sort((x, y) => x - y).map((i) => part.segments[i]).join(' ')
   const overlaps: Overlap[] = []
   for (const f of found) {
     const o = {
@@ -160,8 +143,8 @@ Hvis der ikke er nogen overlap, returnér {"overlaps":[]}.`
       speakerB: b.speech.name,
       kind: f.kind,
       explanation: f.explanation,
-      excerptA: excerpt(f.a, a),
-      excerptB: excerpt(f.b, b),
+      excerptA: excerpt(f.a, a.segments),
+      excerptB: excerpt(f.b, b.segments),
     }
     if (await isSameStory(llm, o.excerptA, o.excerptB)) overlaps.push(o)
   }
@@ -204,7 +187,7 @@ const VERIFY_SCHEMA = JSON.stringify({
 // With thinking disabled WebLLM still prefixes an empty <think></think> block.
 const stripThink = (content: string | null) => (content ?? '').replace(/<think>[\s\S]*?<\/think>/, '')
 
-async function analyze(speeches: Speech[]) {
+async function analyzeLocally(speeches: Speech[]) {
   const llm = await getEngine()
   const prepared = speeches.map((speech) => {
     const segments = splitSegments(speech.text)
@@ -237,8 +220,6 @@ async function analyze(speeches: Speech[]) {
   post({ type: 'result', overlaps })
 }
 
-class FriendlyError extends Error {}
-
 const NO_WEBGPU =
   'Din browser understøtter ikke WebGPU, som er nødvendig for at køre AI-modellen lokalt. Brug en nyere udgave af Chrome eller Edge på en computer (ikke mobil), og sørg for at hardwareacceleration er slået til.'
 
@@ -261,7 +242,13 @@ function friendlyMessage(err: unknown): string {
 self.onmessage = async (e: MessageEvent<ToWorker>) => {
   if (e.data.type !== 'analyze') return
   try {
-    await analyze(e.data.speeches)
+    const { speeches, provider } = e.data
+    if (provider.kind === 'chatgpt') {
+      post({ type: 'status', text: `Sender talerne til ChatGPT (${provider.model})…` })
+      post({ type: 'result', overlaps: await analyzeWithChatGPT(speeches, provider.token, provider.model) })
+    } else {
+      await analyzeLocally(speeches)
+    }
   } catch (err) {
     console.error(err)
     // A lost device makes the engine unusable; recreate it next time.
